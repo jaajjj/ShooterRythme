@@ -1,5 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
+using System.IO;
 using UnrealBuildTool;
 
 public class FinalProject : ModuleRules
@@ -18,21 +19,23 @@ public class FinalProject : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate",
+			"AudioMixer"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
 		PublicIncludePaths.AddRange(new string[] {
-			"FinalProject",
-			"FinalProject/Variant_Horror",
-			"FinalProject/Variant_Horror/UI",
-			"FinalProject/Variant_Shooter",
-			"FinalProject/Variant_Shooter/AI",
-			"FinalProject/Variant_Shooter/UI",
-			"FinalProject/Variant_Shooter/Weapons"
+			ModuleDirectory,
+			Path.Combine(ModuleDirectory, "Character"),
+			Path.Combine(ModuleDirectory, "Logic"),
+			Path.Combine(ModuleDirectory, "Variant_Horror"),
+			Path.Combine(ModuleDirectory, "Variant_Horror/UI"),
+			Path.Combine(ModuleDirectory, "Variant_Shooter"),
+			Path.Combine(ModuleDirectory, "Variant_Shooter/AI"),
+			Path.Combine(ModuleDirectory, "Variant_Shooter/UI"),
+			Path.Combine(ModuleDirectory, "Variant_Shooter/Weapons")
 		});
-
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 

@@ -1,0 +1,29 @@
+# Perforce
+.p4ignore
+p4config.txt
+
+# Unreal Engine
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+Script/
+
+# IDE (Rider & Visual Studio)
+.idea/
+.vs/
+.vscode/
+.vsconfig
+*.sln
+*.slnx
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+
+# Logs et temporaires
+*.log
+*.pdb
+*.obj

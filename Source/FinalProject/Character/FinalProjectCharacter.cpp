@@ -9,6 +9,9 @@
 #include "InputActionValue.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "FinalProject.h"
+#include "Music/MusicLayer.h"
+#include "FinalProjectGameMode.h"
+#include "Engine/Engine.h"
 
 AFinalProjectCharacter::AFinalProjectCharacter()
 {
@@ -59,6 +62,12 @@ void AFinalProjectCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		// Looking/Aiming
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AFinalProjectCharacter::LookInput);
 		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &AFinalProjectCharacter::LookInput);
+
+		//tire
+		if (TirAction)
+		{
+			EnhancedInputComponent->BindAction(TirAction, ETriggerEvent::Started, this, &AFinalProjectCharacter::DoFire);
+		}
 	}
 	else
 	{
@@ -117,4 +126,37 @@ void AFinalProjectCharacter::DoJumpEnd()
 {
 	// pass StopJumping to the character
 	StopJumping();
+}
+
+void AFinalProjectCharacter::DoFire()
+{
+	UMusicLayer* Music = GetWorld()->GetSubsystem<UMusicLayer>();
+	AFinalProjectGameMode* GM = Cast<AFinalProjectGameMode>(GetWorld()->GetAuthGameMode());
+
+	if (!Music || !GM)
+	{
+		return;
+	}
+
+	const float OffsetMs = Music->GetBeatOffsetMs();
+
+	//vérifie si le tir tombe dans la fenêtre du beat (0.12s = +-120ms)
+	if (Music->IsOnBeat(BeatToleranceSec))
+	{
+		GM->AjouterCombo();
+		if (GEngine)
+		{
+			const FString Msg = FString::Printf(TEXT("ON BEAT (%+.0f ms) | Combo : %d"), OffsetMs, GM->GetCombo());
+			GEngine->AddOnScreenDebugMessage(1, 1.5f, FColor::Green, Msg);
+		}
+	}
+	else
+	{
+		GM->ResetCombo();
+		if (GEngine)
+		{
+			const FString Msg = FString::Printf(TEXT("RATE (%+.0f ms) | Combo : 0"), OffsetMs);
+			GEngine->AddOnScreenDebugMessage(1, 1.5f, FColor::Red, Msg);
+		}
+	}
 }

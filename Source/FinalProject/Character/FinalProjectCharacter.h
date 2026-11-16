@@ -49,6 +49,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category ="Input")
 	class UInputAction* MouseLookAction;
 	
+	UPROPERTY(EditAnywhere, Category ="Input")
+	UInputAction* TirAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music Timing", meta = (ClampMin = "0.01", ClampMax = "0.5"))
+	float BeatToleranceSec = 0.12f;
+	
 public:
 	AFinalProjectCharacter();
 
@@ -75,6 +81,9 @@ protected:
 	/** Handles jump end inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
+	
+	UFUNCTION(BlueprintCallable, Category="Input")
+	virtual void DoFire();
 
 protected:
 

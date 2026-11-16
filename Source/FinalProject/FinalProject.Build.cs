@@ -31,6 +31,7 @@ public class FinalProject : ModuleRules
 			Path.Combine(ModuleDirectory, "Logic"),
 			Path.Combine(ModuleDirectory, "Variant_Horror"),
 			Path.Combine(ModuleDirectory, "Variant_Horror/UI"),
+			Path.Combine(ModuleDirectory, "Logic/Music"),
 			Path.Combine(ModuleDirectory, "Variant_Shooter"),
 			Path.Combine(ModuleDirectory, "Variant_Shooter/AI"),
 			Path.Combine(ModuleDirectory, "Variant_Shooter/UI"),

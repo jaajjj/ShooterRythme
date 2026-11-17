@@ -174,7 +174,7 @@ void UMusicLayer::SetArmeAudible(bool bAudible, float FadeDuration)
 
 void UMusicLayer::AppliquerVolumeArmes(float FadeDuration)
 {
-	// Si bArmeAudible est vrai (combo >= 5), l'instrument sélectionné joue à 1.0f, sinon tout est muet
+	//si bArmeAudible est vrai (combo >= 5), l'instrument sélectionné joue à 1.0f, sinon tout est muet
 	for (TPair<FName, TObjectPtr<UAudioComponent>>& Pair : ArmeAudioComps)
 	{
 		if (Pair.Value)
@@ -206,20 +206,18 @@ void UMusicLayer::SetComboPalier(int32 Palier, float FadeDuration)
 	}
 }
 
-void UMusicLayer::SetDetunePitch(float PitchMultiplier)
-{
-	// Conservé pour compatibilité Blueprint
-}
-
 void UMusicLayer::HandleRateNote()
 {
 	SetComboPalier(0, 0.1f);
 	SetArmeAudible(false, 0.1f);
-	
+	if (PisteActu && PisteActu->FailSound)
+	{
+		UGameplayStatics::PlaySound2D(this, PisteActu->FailSound, 1.0f);
+	}
 	if (BaseAudioComp)
 	{
 		BaseAudioComp->SetLowPassFilterEnabled(true);
-		BaseAudioComp->SetLowPassFilterFrequency(600.0f);
+		BaseAudioComp->SetLowPassFilterFrequency(250.0f);
 	}
 	
 	if (GetWorld())
@@ -231,7 +229,7 @@ void UMusicLayer::HandleRateNote()
 			{
 				BaseAudioComp->SetLowPassFilterEnabled(false);
 			}
-		}, 0.35f, false);
+		}, 0.8f, false);
 	}
 }
 
@@ -242,7 +240,7 @@ bool UMusicLayer::IsOnBeat(float ToleranceSec) const
 		return false;
 	}
 
-	//réutilise directement GetBeatOffsetMs() pour garantir exactement la même logique
+	//delegue à GetBeatOffsetMs pour check le timing
 	return FMath::Abs(GetBeatOffsetMs()) <= (ToleranceSec * 1000.0f);
 }
 

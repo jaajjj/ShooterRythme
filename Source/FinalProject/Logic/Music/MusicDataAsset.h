@@ -13,7 +13,7 @@ class FINALPROJECT_API UMusicDataAsset : public UPrimaryDataAsset
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Music Timing", meta = (ClampMin = "40.0", ClampMax = "240.0"))
-	float BPM = 90.0f;
+	float BPM = 130.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Music Timing", meta = (ClampMin = "1", ClampMax = "16"))
 	int32 BeatsPerBar = 4;
@@ -29,4 +29,7 @@ public:
 	//piste des armes
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Music")
 	TMap<FName, TObjectPtr<USoundBase>> ArmePiste;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SoundFX")
+	TObjectPtr<USoundBase> FailSound;
 };

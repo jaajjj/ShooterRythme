@@ -40,10 +40,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Music")
 	void SetComboPalier(int32 Palier, float FadeDuration = 0.25f);
 
-	//Fausse note
-	UFUNCTION(BlueprintCallable, Category = "Music")
-	void SetDetunePitch(float PitchMultiplier);
-
 	//handler appelé quand le joueur rate une note (coupe les combos et désaccorde l'arme temporairement)
 	UFUNCTION(BlueprintCallable, Category = "Music")
 	void HandleRateNote();
@@ -81,6 +77,7 @@ private:
 
 	UPROPERTY()
 	TMap<FName, TObjectPtr<UAudioComponent>> ArmeAudioComps;
+	
 
 	void AppliquerVolumeArmes(float FadeDuration);
 	FName ArmeActiveID = NAME_None;

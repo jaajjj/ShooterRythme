@@ -39,12 +39,15 @@ void AFinalProjectGameMode::ActualiserPalierAudio()
 		NouveauPalier = 1;
 	}
 
-	//ne déclenche le fondu que si on change réellement de palier
-	if (NouveauPalier != PalierActuel)
+	if (UMusicLayer* Music = GetWorld()->GetSubsystem<UMusicLayer>())
 	{
-		PalierActuel = NouveauPalier;
-		if (UMusicLayer* Music = GetWorld()->GetSubsystem<UMusicLayer>())
+		//active l'instrument d'arme dès 5 combos
+		Music->SetArmeAudible(Combo >= SeuilArme, 0.2f);
+
+		//ne déclenche le fondu que si on change réellement de palier
+		if (NouveauPalier != PalierActuel)
 		{
+			PalierActuel = NouveauPalier;
 			Music->SetComboPalier(PalierActuel, 0.25f);
 		}
 	}

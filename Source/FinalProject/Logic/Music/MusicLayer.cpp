@@ -9,6 +9,11 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 
+namespace
+{
+	constexpr float SilentVolume = 0.0001f;
+}
+
 void UMusicLayer::Deinitialize()
 {
 	StopTrack();
@@ -63,10 +68,10 @@ void UMusicLayer::StartTrack(UMusicDataAsset* TrackData)
 	//lance toutes les pistes en même temps sur le même tick
 	BaseAudioComp = CreateAndQueuePiste(TrackData->BasePiste, 1.0f, ImmediateBoundary);
 
-	//pistes combo (toutes muettes au départ)
+	//pistes combo (toutes muettes au départ mais actives sur l'horloge à SilentVolume)
 	for (TObjectPtr<USoundBase> ComboSound : TrackData->ComboPistes)
 	{
-		if (UAudioComponent* ComboComp = CreateAndQueuePiste(ComboSound, 0.0f, ImmediateBoundary))
+		if (UAudioComponent* ComboComp = CreateAndQueuePiste(ComboSound, SilentVolume, ImmediateBoundary))
 		{
 			ComboAudioComps.Add(ComboComp);
 		}
@@ -75,7 +80,7 @@ void UMusicLayer::StartTrack(UMusicDataAsset* TrackData)
 	//pistes armes
 	for (const TPair<FName, TObjectPtr<USoundBase>>& Pair : TrackData->ArmePiste)
 	{
-		if (UAudioComponent* ArmeComp = CreateAndQueuePiste(Pair.Value, 0.0f, ImmediateBoundary))
+		if (UAudioComponent* ArmeComp = CreateAndQueuePiste(Pair.Value, SilentVolume, ImmediateBoundary))
 		{
 			ArmeAudioComps.Add(Pair.Key, ArmeComp);
 		}
@@ -139,9 +144,11 @@ UAudioComponent* UMusicLayer::CreateAndQueuePiste(USoundBase* Sound, float Initi
 	}
 
 	//ajoute la piste audio et la cale sur l'horloge Quartz
-	UAudioComponent* AudioComp = UGameplayStatics::CreateSound2D(this, Sound, InitialVolume, 1.0f, 0.0f, nullptr, false, false);
+	UAudioComponent* AudioComp = UGameplayStatics::CreateSound2D(this, Sound, 1.0f, 1.0f, 0.0f, nullptr, false, false);
 	if (AudioComp)
 	{
+		AudioComp->bAutoDestroy = false;
+		AudioComp->SetVolumeMultiplier(1.0f);
 		UQuartzClockHandle* RawClockHandle = ClockHandle.Get();
 		FQuartzQuantizationBoundary NonConstBoundary = Boundary;
 		FOnQuartzCommandEventBP EmptyDelegate;
@@ -152,12 +159,31 @@ UAudioComponent* UMusicLayer::CreateAndQueuePiste(USoundBase* Sound, float Initi
 
 void UMusicLayer::SetActivePisteArme(FName WeaponID, float FadeDuration)
 {
-	//monte le volume de l'arme active et coupe les autres en fondu
+	ArmeActiveID = WeaponID;
+	AppliquerVolumeArmes(FadeDuration);
+}
+
+void UMusicLayer::SetArmeAudible(bool bAudible, float FadeDuration)
+{
+	if (bArmeAudible != bAudible)
+	{
+		bArmeAudible = bAudible;
+		AppliquerVolumeArmes(FadeDuration);
+	}
+}
+
+void UMusicLayer::AppliquerVolumeArmes(float FadeDuration)
+{
+	// Si bArmeAudible est vrai (combo >= 5), l'instrument sélectionné joue à 1.0f, sinon tout est muet
 	for (TPair<FName, TObjectPtr<UAudioComponent>>& Pair : ArmeAudioComps)
 	{
 		if (Pair.Value)
 		{
-			const float TargetVolume = (Pair.Key == WeaponID) ? 1.0f : 0.0f;
+			if (!Pair.Value->IsActive() || !Pair.Value->IsPlaying())
+			{
+				Pair.Value->Play();
+			}
+			const float TargetVolume = (bArmeAudible && Pair.Key == ArmeActiveID) ? 1.0f : SilentVolume;
 			Pair.Value->AdjustVolume(FadeDuration, TargetVolume);
 		}
 	}
@@ -165,12 +191,16 @@ void UMusicLayer::SetActivePisteArme(FName WeaponID, float FadeDuration)
 
 void UMusicLayer::SetComboPalier(int32 Palier, float FadeDuration)
 {
-	//active les pistes d'index < Palier (ex: Palier 2 active index 0 et 1)
+	//seul le palier correspondant joue, les autres se mutent
 	for (int32 i = 0; i < ComboAudioComps.Num(); ++i)
 	{
 		if (ComboAudioComps[i])
 		{
-			const float TargetVolume = (i < Palier) ? 1.0f : 0.0f;
+			if (!ComboAudioComps[i]->IsActive() || !ComboAudioComps[i]->IsPlaying())
+			{
+				ComboAudioComps[i]->Play();
+			}
+			const float TargetVolume = (Palier > 0 && i == (Palier - 1)) ? 1.0f : SilentVolume;
 			ComboAudioComps[i]->AdjustVolume(FadeDuration, TargetVolume);
 		}
 	}
@@ -178,36 +208,32 @@ void UMusicLayer::SetComboPalier(int32 Palier, float FadeDuration)
 
 void UMusicLayer::SetDetunePitch(float PitchMultiplier)
 {
-	const float ClampedPitch = FMath::Clamp(PitchMultiplier, 0.25f, 2.0f);
-
-	//applique le pitch sur les pistes d'armes
-	for (TPair<FName, TObjectPtr<UAudioComponent>>& Pair : ArmeAudioComps)
-	{
-		if (Pair.Value)
-		{
-			Pair.Value->SetPitchMultiplier(ClampedPitch);
-		}
-	}
+	// Conservé pour compatibilité Blueprint
 }
 
 void UMusicLayer::HandleRateNote()
 {
-	//coupe toutes les pistes de combo
 	SetComboPalier(0, 0.1f);
-
-	//désaccorde la piste de l'arme pendant 0.3s puis remet le pitch normal
-	SetDetunePitch(0.85f);
-
+	SetArmeAudible(false, 0.1f);
+	
+	if (BaseAudioComp)
+	{
+		BaseAudioComp->SetLowPassFilterEnabled(true);
+		BaseAudioComp->SetLowPassFilterFrequency(600.0f);
+	}
+	
 	if (GetWorld())
 	{
 		GetWorld()->GetTimerManager().ClearTimer(DetuneTimerHandle);
 		GetWorld()->GetTimerManager().SetTimer(DetuneTimerHandle, [this]()
 		{
-			SetDetunePitch(1.0f);
-		}, 0.3f, false);
+			if (BaseAudioComp)
+			{
+				BaseAudioComp->SetLowPassFilterEnabled(false);
+			}
+		}, 0.35f, false);
 	}
 }
-
 
 bool UMusicLayer::IsOnBeat(float ToleranceSec) const
 {
@@ -240,6 +266,17 @@ float UMusicLayer::GetBeatOffsetMs() const
 	const double AdjustedTime = GetWorld()->GetTimeSeconds() - static_cast<double>(AudioLatencyOffsetSec);
 	const double TimeSinceLastBeat = AdjustedTime - LastBeatWorldTime;
 	const double TimeToNextBeat = BeatDurationSeconds - TimeSinceLastBeat;
+	
+	if (GEngine)
+	{
+		const FString Msg = FString::Printf(
+		TEXT("AdjustedTime %.2f | TimeSinceLastBeat : %.2f | TimeToNextBeat : %.2f"), 
+		AdjustedTime, 
+		TimeSinceLastBeat, 
+		TimeToNextBeat
+		);
+		GEngine->AddOnScreenDebugMessage(1, 1.5f, FColor::Green, Msg);
+	}
 
 	if (TimeSinceLastBeat <= TimeToNextBeat)
 	{

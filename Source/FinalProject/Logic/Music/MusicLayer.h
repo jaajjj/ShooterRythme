@@ -32,6 +32,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Music")
 	void SetActivePisteArme(FName WeaponID, float FadeDuration = 0.15f);
 
+	//autorise ou coupe l'écoute de l'instrument d'arme (ex: déclenché à partir de 5 combos)
+	UFUNCTION(BlueprintCallable, Category = "Music")
+	void SetArmeAudible(bool bAudible, float FadeDuration = 0.2f);
+
 	//active les pistes combo selon le palier atteint (0 = aucune, 1 = piste 1, 2 = pistes 1+2, 3 = pistes 1+2+3)
 	UFUNCTION(BlueprintCallable, Category = "Music")
 	void SetComboPalier(int32 Palier, float FadeDuration = 0.25f);
@@ -77,6 +81,10 @@ private:
 
 	UPROPERTY()
 	TMap<FName, TObjectPtr<UAudioComponent>> ArmeAudioComps;
+
+	void AppliquerVolumeArmes(float FadeDuration);
+	FName ArmeActiveID = NAME_None;
+	bool bArmeAudible = false;
 
 	FTimerHandle DetuneTimerHandle;
 	double LastBeatWorldTime = 0.0;

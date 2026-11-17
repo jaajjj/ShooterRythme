@@ -47,6 +47,16 @@ AFinalProjectCharacter::AFinalProjectCharacter()
 	GetCharacterMovement()->AirControl = 0.5f;
 }
 
+void AFinalProjectCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	if (UMusicLayer* Music = GetWorld()->GetSubsystem<UMusicLayer>())
+	{
+		Music->OnBeat.AddDynamic(this, &AFinalProjectCharacter::OnMusicBeatReceived);
+	}
+}
+
+
 void AFinalProjectCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {	
 	// Set up action bindings
@@ -67,6 +77,22 @@ void AFinalProjectCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		if (TirAction)
 		{
 			EnhancedInputComponent->BindAction(TirAction, ETriggerEvent::Started, this, &AFinalProjectCharacter::DoFire);
+		}
+		
+		// changement d'arme
+		if (SwitchArme1Action)
+		{
+			EnhancedInputComponent->BindAction(SwitchArme1Action, ETriggerEvent::Triggered, this, &AFinalProjectCharacter::SelectGuitar);
+		}
+
+		if (SwitchArme2Action)
+		{
+			EnhancedInputComponent->BindAction(SwitchArme2Action, ETriggerEvent::Triggered, this, &AFinalProjectCharacter::SelectTrumpet);
+		}
+
+		if (SwitchArme3Action)
+		{
+			EnhancedInputComponent->BindAction(SwitchArme3Action, ETriggerEvent::Triggered, this, &AFinalProjectCharacter::SelectPiano);
 		}
 	}
 	else
@@ -132,7 +158,7 @@ void AFinalProjectCharacter::DoFire()
 {
 	UMusicLayer* Music = GetWorld()->GetSubsystem<UMusicLayer>();
 	AFinalProjectGameMode* GM = Cast<AFinalProjectGameMode>(GetWorld()->GetAuthGameMode());
-
+	
 	if (!Music || !GM)
 	{
 		return;
@@ -140,10 +166,12 @@ void AFinalProjectCharacter::DoFire()
 
 	const float OffsetMs = Music->GetBeatOffsetMs();
 
-	//vérifie si le tir tombe dans la fenêtre du beat (0.12s = +-120ms)
+	//vérifie si le tir tombe dans la fenêtre du beat (0.08s = +-80ms)
 	if (Music->IsOnBeat(BeatToleranceSec))
 	{
+		bDidShootOnCurrentBeat = true;
 		GM->AjouterCombo();
+		//debug
 		if (GEngine)
 		{
 			const FString Msg = FString::Printf(TEXT("ON BEAT (%+.0f ms) | Combo : %d"), OffsetMs, GM->GetCombo());
@@ -152,11 +180,39 @@ void AFinalProjectCharacter::DoFire()
 	}
 	else
 	{
+		bDidShootOnCurrentBeat = false;
 		GM->ResetCombo();
+		//debug
 		if (GEngine)
 		{
 			const FString Msg = FString::Printf(TEXT("RATE (%+.0f ms) | Combo : 0"), OffsetMs);
 			GEngine->AddOnScreenDebugMessage(1, 1.5f, FColor::Red, Msg);
+		}
+	}
+}
+
+void AFinalProjectCharacter::OnMusicBeatReceived(int32 Bar, int32 Beat)
+{
+	AFinalProjectGameMode* GM = Cast<AFinalProjectGameMode>(GetWorld()->GetAuthGameMode());
+	//si on a pas tiré
+	if (GM && GM->GetCombo() > 0 && !bDidShootOnCurrentBeat)
+	{
+		GM->ResetCombo();
+	}
+	bDidShootOnCurrentBeat = false;
+}
+
+
+void AFinalProjectCharacter::ChangerArme(FName WeaponID)
+{
+	if (UMusicLayer* Music = GetWorld()->GetSubsystem<UMusicLayer>())
+	{
+		Music->SetActivePisteArme(WeaponID, 0.15f);
+		//debug
+		if (GEngine)
+		{
+			const FString Msg = FString::Printf(TEXT("ARME ACTIVE : %s"), *WeaponID.ToString());
+			GEngine->AddOnScreenDebugMessage(3, 2.0f, FColor::Yellow, Msg);
 		}
 	}
 }

@@ -32,6 +32,8 @@ class AFinalProjectCharacter : public ACharacter
 	UCameraComponent* FirstPersonCameraComponent;
 
 protected:
+	
+	void BeginPlay();
 
 	/** Jump Input Action */
 	UPROPERTY(EditAnywhere, Category ="Input")
@@ -52,8 +54,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category ="Input")
 	UInputAction* TirAction;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<class UInputAction> SwitchArme1Action;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<class UInputAction> SwitchArme2Action;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<class UInputAction> SwitchArme3Action;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music Timing", meta = (ClampMin = "0.01", ClampMax = "0.5"))
 	float BeatToleranceSec = 0.12f;
+	
+	bool bDidShootOnCurrentBeat = false;
+	//fonction appelée à chaque beat par MusicLayer
+	UFUNCTION()
+	void OnMusicBeatReceived(int32 Bar, int32 Beat);
 	
 public:
 	AFinalProjectCharacter();
@@ -84,6 +100,12 @@ protected:
 	
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoFire();
+		
+	//instruments et changement d'arme
+	void ChangerArme(FName WeaponID);
+	void SelectGuitar()  { ChangerArme(TEXT("guitar")); }
+	void SelectTrumpet() { ChangerArme(TEXT("trumpet")); }
+	void SelectPiano()   { ChangerArme(TEXT("piano")); }
 
 protected:
 

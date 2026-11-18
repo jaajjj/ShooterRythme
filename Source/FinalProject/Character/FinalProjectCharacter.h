@@ -14,10 +14,8 @@ class UInputAction;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPlayerShootRhythm, float, OffsetMs, float, ToleranceMaxMs);
 
-/**
- *  A basic first person character
- */
 UCLASS(abstract)
 class AFinalProjectCharacter : public ACharacter
 {
@@ -66,6 +64,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music Timing", meta = (ClampMin = "0.01", ClampMax = "0.5"))
 	float BeatToleranceSec = 0.12f;
 	
+	UPROPERTY(BlueprintAssignable, Category = "Rhythm")
+	FOnPlayerShootRhythm OnPlayerShoot;
+	
 	bool bDidShootOnCurrentBeat = false;
 	//fonction appelée à chaque beat par MusicLayer
 	UFUNCTION()
@@ -111,7 +112,6 @@ protected:
 
 	/** Set up input action bindings */
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
-	
 
 public:
 

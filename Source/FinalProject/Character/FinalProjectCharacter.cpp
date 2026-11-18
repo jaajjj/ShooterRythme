@@ -165,6 +165,7 @@ void AFinalProjectCharacter::DoFire()
 	}
 
 	const float OffsetMs = Music->GetBeatOffsetMs();
+	OnPlayerShoot.Broadcast(OffsetMs, BeatToleranceSec * 1000.0f);
 
 	//vérifie si le tir tombe dans la fenêtre du beat (0.08s = +-80ms)
 	if (Music->IsOnBeat(BeatToleranceSec))

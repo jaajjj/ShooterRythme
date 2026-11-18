@@ -20,7 +20,8 @@ public class FinalProject : ModuleRules
 			"GameplayStateTreeModule",
 			"UMG",
 			"Slate",
-			"AudioMixer"
+			"AudioMixer",
+			"DeveloperSettings"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
@@ -35,7 +36,9 @@ public class FinalProject : ModuleRules
 			Path.Combine(ModuleDirectory, "Variant_Shooter"),
 			Path.Combine(ModuleDirectory, "Variant_Shooter/AI"),
 			Path.Combine(ModuleDirectory, "Variant_Shooter/UI"),
-			Path.Combine(ModuleDirectory, "Variant_Shooter/Weapons")
+			Path.Combine(ModuleDirectory, "Variant_Shooter/Weapons"),
+			Path.Combine(ModuleDirectory, "Settings"),
+			Path.Combine(ModuleDirectory, "UI")
 		});
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

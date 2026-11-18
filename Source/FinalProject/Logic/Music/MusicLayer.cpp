@@ -8,10 +8,20 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "../Settings/RhythmSettings.h"
 
 namespace
 {
 	constexpr float SilentVolume = 0.0001f;
+}
+
+void UMusicLayer::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	if (const URhythmSettings* Settings = GetDefault<URhythmSettings>())
+	{
+		AudioLatencyOffsetSec = FMath::Clamp(Settings->AudioLatencyOffsetSec, 0.0f, 0.5f);
+	}
 }
 
 void UMusicLayer::Deinitialize()
@@ -92,10 +102,11 @@ void UMusicLayer::StartTrack(UMusicDataAsset* TrackData)
 
 void UMusicLayer::StopTrack()
 {
-	//nettoie le timer de fausse note
+	//nettoie le timer de fausse note et de synchro de beat
 	if (GetWorld())
 	{
 		GetWorld()->GetTimerManager().ClearTimer(DetuneTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(BeatLatencyTimerHandle);
 	}
 
 	//coupe la piste principale
@@ -246,11 +257,32 @@ bool UMusicLayer::IsOnBeat(float ToleranceSec) const
 
 void UMusicLayer::HandleMetronomeEvent(FName ClockName, EQuartzCommandQuantization QuantizationType, int32 NumBars, int32 Beat, float BeatFraction)
 {
-	if (GetWorld())
+	UWorld* World = GetWorld();
+	if (!World)
 	{
-		LastBeatWorldTime = GetWorld()->GetTimeSeconds();
+		return;
 	}
-	OnBeat.Broadcast(NumBars, Beat);
+
+	LastBeatWorldTime = World->GetTimeSeconds();
+	
+	const float DecalageAudio = FMath::Clamp(AudioLatencyOffsetSec, 0.0f, 0.5f);
+	if (DecalageAudio > 0.001f)
+	{
+		//lance le onBeat selon le décalage audio
+		World->GetTimerManager().SetTimer(
+			BeatLatencyTimerHandle,
+			FTimerDelegate::CreateWeakLambda(this, [this, NumBars, Beat]()
+			{
+				OnBeat.Broadcast(NumBars, Beat);
+			}),
+			DecalageAudio,
+			false
+		);
+	}
+	else
+	{
+		OnBeat.Broadcast(NumBars, Beat);
+	}
 }
 
 float UMusicLayer::GetBeatOffsetMs() const
@@ -264,17 +296,6 @@ float UMusicLayer::GetBeatOffsetMs() const
 	const double AdjustedTime = GetWorld()->GetTimeSeconds() - static_cast<double>(AudioLatencyOffsetSec);
 	const double TimeSinceLastBeat = AdjustedTime - LastBeatWorldTime;
 	const double TimeToNextBeat = BeatDurationSeconds - TimeSinceLastBeat;
-	
-	if (GEngine)
-	{
-		const FString Msg = FString::Printf(
-		TEXT("AdjustedTime %.2f | TimeSinceLastBeat : %.2f | TimeToNextBeat : %.2f"), 
-		AdjustedTime, 
-		TimeSinceLastBeat, 
-		TimeToNextBeat
-		);
-		GEngine->AddOnScreenDebugMessage(1, 1.5f, FColor::Green, Msg);
-	}
 
 	if (TimeSinceLastBeat <= TimeToNextBeat)
 	{

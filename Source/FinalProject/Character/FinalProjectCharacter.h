@@ -67,13 +67,27 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "Rhythm")
 	FOnPlayerShootRhythm OnPlayerShoot;
 	
-	bool bDidShootOnCurrentBeat = false;
 	//fonction appelée à chaque beat par MusicLayer
 	UFUNCTION()
 	void OnMusicBeatReceived(int32 Bar, int32 Beat);
+
+	//effet FOV
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Rhythm", meta = (ClampMin = "0.0", ClampMax = "15.0"))
+	float BeatFovKickAmount = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Rhythm", meta = (ClampMin = "1.0", ClampMax = "30.0"))
+	float FovInterpSpeed = 16.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Rhythm")
+	bool bAccentuateFirstBeat = true;
+
+	float BaseFOV = 90.0f;
+	float BaseFirstPersonFOV = 70.0f;
+	float CurrentFovOffset = 0.0f;
 	
 public:
 	AFinalProjectCharacter();
+	virtual void Tick(float DeltaSeconds) override;
 
 protected:
 

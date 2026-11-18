@@ -45,14 +45,34 @@ AFinalProjectCharacter::AFinalProjectCharacter()
 	// Configure character movement
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 	GetCharacterMovement()->AirControl = 0.5f;
+
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 void AFinalProjectCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	if (FirstPersonCameraComponent)
+	{
+		BaseFOV = FirstPersonCameraComponent->FieldOfView;
+		BaseFirstPersonFOV = FirstPersonCameraComponent->FirstPersonFieldOfView;
+	}
+
 	if (UMusicLayer* Music = GetWorld()->GetSubsystem<UMusicLayer>())
 	{
 		Music->OnBeat.AddDynamic(this, &AFinalProjectCharacter::OnMusicBeatReceived);
+	}
+}
+
+void AFinalProjectCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (FirstPersonCameraComponent && FMath::Abs(CurrentFovOffset) > 0.005f)
+	{
+		CurrentFovOffset = FMath::FInterpTo(CurrentFovOffset, 0.0f, DeltaSeconds, FovInterpSpeed);
+		FirstPersonCameraComponent->SetFieldOfView(BaseFOV + CurrentFovOffset);
+		FirstPersonCameraComponent->SetFirstPersonFieldOfView(BaseFirstPersonFOV + CurrentFovOffset);
 	}
 }
 
@@ -170,7 +190,6 @@ void AFinalProjectCharacter::DoFire()
 	//vérifie si le tir tombe dans la fenêtre du beat (0.08s = +-80ms)
 	if (Music->IsOnBeat(BeatToleranceSec))
 	{
-		bDidShootOnCurrentBeat = true;
 		GM->AjouterCombo();
 		//debug
 		if (GEngine)
@@ -181,7 +200,6 @@ void AFinalProjectCharacter::DoFire()
 	}
 	else
 	{
-		bDidShootOnCurrentBeat = false;
 		GM->ResetCombo();
 		//debug
 		if (GEngine)
@@ -194,13 +212,14 @@ void AFinalProjectCharacter::DoFire()
 
 void AFinalProjectCharacter::OnMusicBeatReceived(int32 Bar, int32 Beat)
 {
-	AFinalProjectGameMode* GM = Cast<AFinalProjectGameMode>(GetWorld()->GetAuthGameMode());
-	//si on a pas tiré
-	if (GM && GM->GetCombo() > 0 && !bDidShootOnCurrentBeat)
+	// Effet FOV Kick rythmique à chaque beat
+	if (BeatFovKickAmount > 0.0f && FirstPersonCameraComponent)
 	{
-		GM->ResetCombo();
+		const float Multiplier = (bAccentuateFirstBeat && Beat == 1) ? 1.4f : 1.0f;
+		CurrentFovOffset = -BeatFovKickAmount * Multiplier;
+		FirstPersonCameraComponent->SetFieldOfView(BaseFOV + CurrentFovOffset);
+		FirstPersonCameraComponent->SetFirstPersonFieldOfView(BaseFirstPersonFOV + CurrentFovOffset);
 	}
-	bDidShootOnCurrentBeat = false;
 }
 
 

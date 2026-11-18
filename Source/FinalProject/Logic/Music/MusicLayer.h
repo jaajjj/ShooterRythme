@@ -51,10 +51,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Music Timing")
 	float GetBeatOffsetMs() const;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music Timing")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music Timing", meta = (ClampMin = "0.0", UIMin = "0.0", ClampMax = "0.5", UIMax = "0.5"))
 	float AudioLatencyOffsetSec = 0.055f;
 
 protected:
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
 private:
@@ -84,6 +85,7 @@ private:
 	bool bArmeAudible = false;
 
 	FTimerHandle DetuneTimerHandle;
+	FTimerHandle BeatLatencyTimerHandle;
 	double LastBeatWorldTime = 0.0;
 	float BeatDurationSeconds = 0.5f;
 };

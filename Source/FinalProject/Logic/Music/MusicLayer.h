@@ -11,6 +11,7 @@ class UAudioComponent;
 class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMusicBeatSignature, int32, Bar, int32, Beat);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmePisteChangedSignature, FName, NouvelleArmeID);
 
 UCLASS()
 class FINALPROJECT_API UMusicLayer : public UWorldSubsystem
@@ -21,6 +22,10 @@ public:
 	//Déclenché à chaque beat
 	UPROPERTY(BlueprintAssignable, Category = "Music")
 	FOnMusicBeatSignature OnBeat;
+
+	//Déclenché quand l'arme active change
+	UPROPERTY(BlueprintAssignable, Category = "Music")
+	FOnArmePisteChangedSignature OnArmePisteChanged;
 
 	UFUNCTION(BlueprintCallable, Category = "Music")
 	void StartTrack(UMusicDataAsset* TrackData);
@@ -50,6 +55,23 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "Music Timing")
 	float GetBeatOffsetMs() const;
+
+	//temps écoulé depuis le dernier beat en secondes (ajusté avec la latence audio)
+	UFUNCTION(BlueprintPure, Category = "Music Timing")
+	float GetTimeSinceLastBeat() const;
+
+	//progression du beat en cours (0.0 au début du beat -> 1.0 à l'impact)
+	UFUNCTION(BlueprintPure, Category = "Music Timing")
+	float GetBeatProgress() const;
+
+	UFUNCTION(BlueprintPure, Category = "Music Timing")
+	float GetBeatDurationSeconds() const { return BeatDurationSeconds; }
+
+	UFUNCTION(BlueprintPure, Category = "Music Timing")
+	double GetLastBeatWorldTime() const { return LastBeatWorldTime; }
+
+	UFUNCTION(BlueprintPure, Category = "Music")
+	FName GetArmeActiveID() const { return ArmeActiveID; }
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music Timing", meta = (ClampMin = "0.0", UIMin = "0.0", ClampMax = "0.5", UIMax = "0.5"))
 	float AudioLatencyOffsetSec = 0.055f;

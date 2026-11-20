@@ -172,6 +172,7 @@ void UMusicLayer::SetActivePisteArme(FName WeaponID, float FadeDuration)
 {
 	ArmeActiveID = WeaponID;
 	AppliquerVolumeArmes(FadeDuration);
+	OnArmePisteChanged.Broadcast(WeaponID);
 }
 
 void UMusicLayer::SetArmeAudible(bool bAudible, float FadeDuration)
@@ -285,6 +286,29 @@ void UMusicLayer::HandleMetronomeEvent(FName ClockName, EQuartzCommandQuantizati
 	}
 }
 
+float UMusicLayer::GetTimeSinceLastBeat() const
+{
+	if (!GetWorld() || !ClockHandle)
+	{
+		return 0.0f;
+	}
+
+	const double AdjustedTime = GetWorld()->GetTimeSeconds() - static_cast<double>(AudioLatencyOffsetSec);
+	const double TimeSinceLast = AdjustedTime - LastBeatWorldTime;
+	return FMath::Max(0.0f, static_cast<float>(TimeSinceLast));
+}
+
+float UMusicLayer::GetBeatProgress() const
+{
+	if (BeatDurationSeconds <= 0.0001f)
+	{
+		return 0.0f;
+	}
+
+	const float TimeSinceLast = GetTimeSinceLastBeat();
+	return FMath::Clamp(TimeSinceLast / BeatDurationSeconds, 0.0f, 1.0f);
+}
+
 float UMusicLayer::GetBeatOffsetMs() const
 {
 	if (!GetWorld() || !ClockHandle)
@@ -293,13 +317,12 @@ float UMusicLayer::GetBeatOffsetMs() const
 	}
 
 	//soustrait la latence audio au temps actuel pour aligner l'oreille du joueur avec l'horloge
-	const double AdjustedTime = GetWorld()->GetTimeSeconds() - static_cast<double>(AudioLatencyOffsetSec);
-	const double TimeSinceLastBeat = AdjustedTime - LastBeatWorldTime;
-	const double TimeToNextBeat = BeatDurationSeconds - TimeSinceLastBeat;
+	const float TimeSinceLastBeat = GetTimeSinceLastBeat();
+	const float TimeToNextBeat = BeatDurationSeconds - TimeSinceLastBeat;
 
 	if (TimeSinceLastBeat <= TimeToNextBeat)
 	{
-		return static_cast<float>(TimeSinceLastBeat * 1000.0);
+		return TimeSinceLastBeat * 1000.0f;
 	}
-	return static_cast<float>(-TimeToNextBeat * 1000.0);
+	return -TimeToNextBeat * 1000.0f;
 }

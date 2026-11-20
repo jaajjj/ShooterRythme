@@ -36,16 +36,19 @@ AFinalProjectCharacter::AFinalProjectCharacter()
 	FirstPersonCameraComponent->FirstPersonFieldOfView = 70.0f;
 	FirstPersonCameraComponent->FirstPersonScale = 0.6f;
 
-	// configure the character comps
-	GetMesh()->SetOwnerNoSee(true);
-	GetMesh()->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::WorldSpaceRepresentation;
-
 	GetCapsuleComponent()->SetCapsuleSize(34.0f, 96.0f);
 
 	// Configure character movement
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 	GetCharacterMovement()->AirControl = 0.5f;
 
+	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+	GetCharacterMovement()->SetCrouchedHalfHeight(44.0f);
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	DefaultGroundFriction = GetCharacterMovement()->GroundFriction;
+	DefaultBrakingDeceleration = GetCharacterMovement()->BrakingDecelerationWalking;
+	DefaultMaxWalkSpeedCrouched = GetCharacterMovement()->MaxWalkSpeedCrouched;
+	
 	PrimaryActorTick.bCanEverTick = true;
 }
 
@@ -73,6 +76,22 @@ void AFinalProjectCharacter::Tick(float DeltaSeconds)
 		CurrentFovOffset = FMath::FInterpTo(CurrentFovOffset, 0.0f, DeltaSeconds, FovInterpSpeed);
 		FirstPersonCameraComponent->SetFieldOfView(BaseFOV + CurrentFovOffset);
 		FirstPersonCameraComponent->SetFirstPersonFieldOfView(BaseFirstPersonFOV + CurrentFovOffset);
+	}
+	// if (FirstPersonCameraComponent)
+	// {
+	// 	const float TargetCameraZ = bIsSliding ? SlideCameraZ : NormalCameraZ;
+	// 	CurrentCameraZ = FMath::FInterpTo(CurrentCameraZ, TargetCameraZ, DeltaSeconds, 12.0f);
+	// 	
+	// 	FVector CamLoc = FirstPersonCameraComponent->GetRelativeLocation();
+	// 	CamLoc.Z = CurrentCameraZ;
+	// 	FirstPersonCameraComponent->SetRelativeLocation(CamLoc);
+	// }
+	CurrentSlideRoll = FMath::FInterpTo(CurrentSlideRoll, TargetSlideRoll, DeltaSeconds, 8.0f);
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		FRotator ControlRot = PC->GetControlRotation();
+		ControlRot.Roll = CurrentSlideRoll;
+		PC->SetControlRotation(ControlRot);
 	}
 }
 
@@ -113,6 +132,17 @@ void AFinalProjectCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		if (SwitchArme3Action)
 		{
 			EnhancedInputComponent->BindAction(SwitchArme3Action, ETriggerEvent::Triggered, this, &AFinalProjectCharacter::SelectPiano);
+		}
+		
+		if (SprintAction)
+		{
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AFinalProjectCharacter::StartSprint);
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AFinalProjectCharacter::StopSprint);
+		}
+
+		if (SlideAction)
+		{
+			EnhancedInputComponent->BindAction(SlideAction, ETriggerEvent::Started, this, &AFinalProjectCharacter::StartSlide);
 		}
 	}
 	else
@@ -235,4 +265,86 @@ void AFinalProjectCharacter::ChangerArme(FName WeaponID)
 			GEngine->AddOnScreenDebugMessage(3, 2.0f, FColor::Yellow, Msg);
 		}
 	}
+}
+
+void AFinalProjectCharacter::StartSprint()
+{
+	bIsSprinting = true;
+	if (!bIsSliding)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(20, 1.0f, FColor::Cyan, FString::Printf(TEXT("SPRINT ACTIF - Vitesse: %f"), GetCharacterMovement()->MaxWalkSpeed));
+		}
+	}
+}
+
+void AFinalProjectCharacter::StopSprint()
+{
+	bIsSprinting = false;
+	if (!bIsSliding)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(20, 1.0f, FColor::Orange, FString::Printf(TEXT("MARCHE NORMALE - Vitesse: %f"), GetCharacterMovement()->MaxWalkSpeed));
+		}
+	}
+}
+
+void AFinalProjectCharacter::StartSlide()
+{
+	if (!GetCharacterMovement()->IsMovingOnGround() || bIsSliding)
+	{
+		return;
+	}
+
+	if (GetVelocity().Size() < (WalkSpeed * 0.7f))
+	{
+		return;
+	}
+
+	bIsSliding = true;
+	TargetSlideRoll = -6.0f;
+
+	Crouch();
+
+	GetCharacterMovement()->GroundFriction = 0.0f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 0.0f;
+
+	GetCharacterMovement()->MaxWalkSpeedCrouched = SlideImpulse;
+
+	FVector SlideDirection = GetVelocity().GetSafeNormal2D();
+	if (SlideDirection.IsNearlyZero())
+	{
+		SlideDirection = GetActorForwardVector();
+	}
+	LaunchCharacter(SlideDirection * SlideImpulse, true, false);
+
+	GetWorld()->GetTimerManager().SetTimer(
+		SlideTimerHandle,
+		this,
+		&AFinalProjectCharacter::StopSlide,
+		SlideDuration,
+		false
+	);
+}
+
+void AFinalProjectCharacter::StopSlide()
+{
+	if (!bIsSliding)
+	{
+		return;
+	}
+
+	bIsSliding = false;
+	TargetSlideRoll = 0.0f;
+	GetWorld()->GetTimerManager().ClearTimer(SlideTimerHandle);
+
+	UnCrouch();
+	GetCharacterMovement()->GroundFriction = DefaultGroundFriction;
+	GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = DefaultMaxWalkSpeedCrouched;
+	GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? SprintSpeed : WalkSpeed;
 }

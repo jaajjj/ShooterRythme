@@ -49,6 +49,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category ="Input")
 	class UInputAction* MouseLookAction;
 	
+	/** Sprint Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* SprintAction;
+
+	/** Slide Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* SlideAction;
+	
 	UPROPERTY(EditAnywhere, Category ="Input")
 	UInputAction* TirAction;
 	
@@ -63,9 +71,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music Timing", meta = (ClampMin = "0.01", ClampMax = "0.5"))
 	float BeatToleranceSec = 0.12f;
-	
-	UPROPERTY(BlueprintAssignable, Category = "Rhythm")
-	FOnPlayerShootRhythm OnPlayerShoot;
 	
 	//fonction appelée à chaque beat par MusicLayer
 	UFUNCTION()
@@ -87,6 +92,52 @@ protected:
 	
 public:
 	AFinalProjectCharacter();
+
+	UPROPERTY(BlueprintAssignable, Category = "Rhythm")
+	FOnPlayerShootRhythm OnPlayerShoot;
+	
+	// --- Vitesses et Sprint ---
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Sprint")
+	float WalkSpeed = 300.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Sprint")
+	float SprintSpeed = 650.f;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Sprint")
+	bool bIsSprinting = false;
+
+	// --- Glissade (Slide) ---
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
+	float SlideImpulse = 1500.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
+	float SlideDuration = 0.8f;
+
+	float DefaultGroundFriction = 8.0f;
+	float DefaultBrakingDeceleration = 2048.0f;
+	float DefaultMaxWalkSpeedCrouched = 200.0f;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Slide")
+	bool bIsSliding = false;
+	
+	FTimerHandle SlideTimerHandle;
+
+	float TargetSlideRoll = 0.0f;
+	float CurrentSlideRoll = 0.0f;
+	
+	FVector BaseCameraLocation = FVector(-2.8f, 5.89f, 0.0f);
+	float CurrentSlideDown = 0.0f;
+	float TargetSlideDown = 0.0f;
+	
+	float NormalCameraZ = 65.0f;
+	float SlideCameraZ = 15.0f;
+	float CurrentCameraZ = 65.0f;
+	
+	void StartSprint();
+	void StopSprint();
+	void StartSlide();
+	void StopSlide();
+	
 	virtual void Tick(float DeltaSeconds) override;
 
 protected:
@@ -116,6 +167,14 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoFire();
 		
+public:
+	// --- Stats & Kills ---
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	int32 KillCount = 0;
+
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void AddKill() { ++KillCount; }
+
 	//instruments et changement d'arme
 	void ChangerArme(FName WeaponID);
 	void SelectGuitar()  { ChangerArme(TEXT("guitar")); }

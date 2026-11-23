@@ -93,6 +93,21 @@ protected:
 public:
 	AFinalProjectCharacter();
 
+	// --- Santé du Joueur ---
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
+	float MaxHealth = 100.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health")
+	float CurrentHealth = 100.0f;
+
+	UFUNCTION(BlueprintPure, Category = "Health")
+	float GetHealthPercent() const { return MaxHealth > 0.0f ? CurrentHealth / MaxHealth : 0.0f; }
+
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void Heal(float HealAmount) { CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.0f, MaxHealth); }
+
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
 	UPROPERTY(BlueprintAssignable, Category = "Rhythm")
 	FOnPlayerShootRhythm OnPlayerShoot;
 	

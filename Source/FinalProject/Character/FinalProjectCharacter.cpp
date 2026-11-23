@@ -13,6 +13,8 @@
 #include "FinalProjectGameMode.h"
 #include "Engine/Engine.h"
 
+DEFINE_LOG_CATEGORY(LogTemplateCharacter);
+
 AFinalProjectCharacter::AFinalProjectCharacter()
 {
 	// Set size for collision capsule
@@ -55,6 +57,9 @@ AFinalProjectCharacter::AFinalProjectCharacter()
 void AFinalProjectCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	CurrentHealth = MaxHealth;
+
 	if (FirstPersonCameraComponent)
 	{
 		BaseFOV = FirstPersonCameraComponent->FieldOfView;
@@ -273,6 +278,7 @@ void AFinalProjectCharacter::StartSprint()
 	if (!bIsSliding)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+		//debug
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(20, 1.0f, FColor::Cyan, FString::Printf(TEXT("SPRINT ACTIF - Vitesse: %f"), GetCharacterMovement()->MaxWalkSpeed));
@@ -286,6 +292,7 @@ void AFinalProjectCharacter::StopSprint()
 	if (!bIsSliding)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+		//debug
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(20, 1.0f, FColor::Orange, FString::Printf(TEXT("MARCHE NORMALE - Vitesse: %f"), GetCharacterMovement()->MaxWalkSpeed));
@@ -347,4 +354,24 @@ void AFinalProjectCharacter::StopSlide()
 	GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = DefaultMaxWalkSpeedCrouched;
 	GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? SprintSpeed : WalkSpeed;
+}
+
+float AFinalProjectCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+	if (DamageAmount <= 0.0f || CurrentHealth <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	CurrentHealth = FMath::Clamp(CurrentHealth - ActualDamage, 0.0f, MaxHealth);
+	//debug
+	UE_LOG(LogTemplateCharacter, Log, TEXT("Player took %f damage, CurrentHealth: %f"), ActualDamage, CurrentHealth);
+	//debug
+	if (CurrentHealth <= 0.0f)
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Player is DEAD!"));
+	}
+
+	return ActualDamage;
 }

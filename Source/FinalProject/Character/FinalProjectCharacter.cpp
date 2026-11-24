@@ -11,7 +11,9 @@
 #include "FinalProject.h"
 #include "Music/MusicLayer.h"
 #include "FinalProjectGameMode.h"
+#include "Settings/RhythmSettings.h"
 #include "Engine/Engine.h"
+#include "Engine/OverlapResult.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -39,6 +41,7 @@ AFinalProjectCharacter::AFinalProjectCharacter()
 	FirstPersonCameraComponent->FirstPersonScale = 0.6f;
 
 	GetCapsuleComponent()->SetCapsuleSize(34.0f, 96.0f);
+	DefaultCapsuleRadius = 34.0f;
 
 	// Configure character movement
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
@@ -64,6 +67,11 @@ void AFinalProjectCharacter::BeginPlay()
 	{
 		BaseFOV = FirstPersonCameraComponent->FieldOfView;
 		BaseFirstPersonFOV = FirstPersonCameraComponent->FirstPersonFieldOfView;
+	}
+
+	if (const URhythmSettings* Settings = GetDefault<URhythmSettings>())
+	{
+		BeatToleranceSec = Settings->BeatToleranceSec;
 	}
 
 	if (UMusicLayer* Music = GetWorld()->GetSubsystem<UMusicLayer>())
@@ -97,6 +105,11 @@ void AFinalProjectCharacter::Tick(float DeltaSeconds)
 		FRotator ControlRot = PC->GetControlRotation();
 		ControlRot.Roll = CurrentSlideRoll;
 		PC->SetControlRotation(ControlRot);
+	}
+
+	if (bIsSliding)
+	{
+		PerformSlideRepulse();
 	}
 }
 
@@ -314,8 +327,13 @@ void AFinalProjectCharacter::StartSlide()
 
 	bIsSliding = true;
 	TargetSlideRoll = -6.0f;
+	SlidePushedActors.Empty();
 
 	Crouch();
+
+	// Réduit la capsule et passe la réponse aux Pawns en Overlap pour traverser la horde sans être coincé
+	GetCapsuleComponent()->SetCapsuleRadius(SlideCapsuleRadius);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 
 	GetCharacterMovement()->GroundFriction = 0.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 0.0f;
@@ -328,6 +346,9 @@ void AFinalProjectCharacter::StartSlide()
 		SlideDirection = GetActorForwardVector();
 	}
 	LaunchCharacter(SlideDirection * SlideImpulse, true, false);
+
+	// Première répulsion dès le lancement de la glissade
+	PerformSlideRepulse();
 
 	GetWorld()->GetTimerManager().SetTimer(
 		SlideTimerHandle,
@@ -347,13 +368,65 @@ void AFinalProjectCharacter::StopSlide()
 
 	bIsSliding = false;
 	TargetSlideRoll = 0.0f;
+	SlidePushedActors.Empty();
 	GetWorld()->GetTimerManager().ClearTimer(SlideTimerHandle);
 
 	UnCrouch();
+
+	// Rétablit le rayon et la collision physique normale
+	GetCapsuleComponent()->SetCapsuleRadius(DefaultCapsuleRadius);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+
 	GetCharacterMovement()->GroundFriction = DefaultGroundFriction;
 	GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = DefaultMaxWalkSpeedCrouched;
 	GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? SprintSpeed : WalkSpeed;
+}
+
+void AFinalProjectCharacter::PerformSlideRepulse()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const FVector PlayerLoc = GetActorLocation();
+	TArray<FOverlapResult> Overlaps;
+	FCollisionShape Sphere = FCollisionShape::MakeSphere(SlideRepulseRadius);
+
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	if (World->OverlapMultiByChannel(Overlaps, PlayerLoc, FQuat::Identity, ECC_Pawn, Sphere, QueryParams))
+	{
+		for (const FOverlapResult& Overlap : Overlaps)
+		{
+			AActor* HitActor = Overlap.GetActor();
+			if (HitActor && HitActor != this && !SlidePushedActors.Contains(HitActor))
+			{
+				if (ACharacter* EnemyChar = Cast<ACharacter>(HitActor))
+				{
+					SlidePushedActors.Add(HitActor);
+
+					FVector PushDir = (EnemyChar->GetActorLocation() - PlayerLoc);
+					PushDir.Z = 0.0f;
+					if (PushDir.IsNearlyZero())
+					{
+						PushDir = GetActorForwardVector();
+					}
+					else
+					{
+						PushDir.Normalize();
+					}
+
+					// Répulsion dynamique de l'ennemi touché
+					const FVector LaunchVel = PushDir * SlideRepulseForce + FVector(0.0f, 0.0f, SlideRepulseUpwardForce);
+					EnemyChar->LaunchCharacter(LaunchVel, true, true);
+				}
+			}
+		}
+	}
 }
 
 float AFinalProjectCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)

@@ -264,16 +264,18 @@ void UMusicLayer::HandleMetronomeEvent(FName ClockName, EQuartzCommandQuantizati
 		return;
 	}
 
-	LastBeatWorldTime = World->GetTimeSeconds();
-	
 	const float DecalageAudio = FMath::Clamp(AudioLatencyOffsetSec, 0.0f, 0.5f);
 	if (DecalageAudio > 0.001f)
 	{
-		//lance le onBeat selon le décalage audio
+		//délègue à la fin du décalage audio pour aligner l'instant exact où l'oreille entend le son
 		World->GetTimerManager().SetTimer(
 			BeatLatencyTimerHandle,
-			FTimerDelegate::CreateWeakLambda(this, [this, NumBars, Beat]()
+			FTimerDelegate::CreateWeakLambda(this, [this, NumBars, Beat, World]()
 			{
+				if (World)
+				{
+					LastBeatWorldTime = World->GetTimeSeconds();
+				}
 				OnBeat.Broadcast(NumBars, Beat);
 			}),
 			DecalageAudio,
@@ -282,6 +284,7 @@ void UMusicLayer::HandleMetronomeEvent(FName ClockName, EQuartzCommandQuantizati
 	}
 	else
 	{
+		LastBeatWorldTime = World->GetTimeSeconds();
 		OnBeat.Broadcast(NumBars, Beat);
 	}
 }
@@ -293,8 +296,9 @@ float UMusicLayer::GetTimeSinceLastBeat() const
 		return 0.0f;
 	}
 
-	const double AdjustedTime = GetWorld()->GetTimeSeconds() - static_cast<double>(AudioLatencyOffsetSec);
-	const double TimeSinceLast = AdjustedTime - LastBeatWorldTime;
+	//LastBeatWorldTime étant calé sur l'impact acoustique réel du son, le temps s'écoule de manière 100% continue et sans saccade
+	const double CurrentTime = GetWorld()->GetTimeSeconds();
+	const double TimeSinceLast = CurrentTime - LastBeatWorldTime;
 	return FMath::Max(0.0f, static_cast<float>(TimeSinceLast));
 }
 

@@ -147,6 +147,25 @@ public:
 	float NormalCameraZ = 65.0f;
 	float SlideCameraZ = 15.0f;
 	float CurrentCameraZ = 65.0f;
+
+	// --- Répulsion des ennemis et esquive pendant la glissade ---
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
+	float SlideRepulseRadius = 180.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
+	float SlideRepulseForce = 1200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
+	float SlideRepulseUpwardForce = 250.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
+	float SlideCapsuleRadius = 20.0f;
+
+	float DefaultCapsuleRadius = 34.0f;
+
+	TSet<TWeakObjectPtr<AActor>> SlidePushedActors;
+
+	void PerformSlideRepulse();
 	
 	void StartSprint();
 	void StopSprint();

@@ -7,9 +7,11 @@
 #include "Character/EnemyDataAsset.h"
 #include "EnemyBase.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeathSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEnemyDeathSignature, AEnemyBase*, DeadEnemy);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEnemyDeactivatedSignature, AEnemyBase*, DeactivatedEnemy);
 
 class AAIController;
+class ADetourCrowdAIController;
 class UAnimMontage;
 
 UCLASS()
@@ -71,9 +73,23 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|State")
 	bool bIsAttacking = false;
 
+	// Object Pooling
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Pool")
+	bool bIsPooled = false;
+
 	// Event Broadcast
 	UPROPERTY(BlueprintAssignable, Category = "Enemy|Events")
 	FOnEnemyDeathSignature OnDeathDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = "Enemy|Events")
+	FOnEnemyDeactivatedSignature OnDeactivatedDelegate;
+
+	// Fonctions Object Pooling
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Pool")
+	virtual void ActivateFromPool(UEnemyDataAsset* InData, const FTransform& SpawnTransform);
+
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Pool")
+	virtual void DeactivateToPool();
 
 	// Event Blueprint
 	UFUNCTION(BlueprintImplementableEvent, Category = "Enemy|Events")
@@ -96,6 +112,7 @@ protected:
 	FTimerHandle ChaseTimerHandle;
 	FTimerHandle AttackCooldownTimerHandle;
 	FTimerHandle HitDelayTimerHandle;
+	FTimerHandle ReturnToPoolTimerHandle;
 
 	UPROPERTY()
 	TObjectPtr<AActor> CurrentAttackTarget;

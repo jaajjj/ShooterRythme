@@ -4,6 +4,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "FinalProjectGameMode.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnComboChange, int32, Pallier, int32, NewCombo);
+
 UCLASS(abstract)
 class FINALPROJECT_API AFinalProjectGameMode : public AGameModeBase
 {
@@ -21,6 +23,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Combo")
 	int32 GetCombo() const { return Combo; }
+	
+	UPROPERTY(BlueprintAssignable, Category = "Combo")
+	FOnComboChange OnComboChange;
 
 protected:
 	//seuil de combo pour activer la piste instrument de l'arme

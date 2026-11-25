@@ -16,6 +16,7 @@ void AFinalProjectGameMode::ResetCombo()
 {
 	Combo = 0;
 	PalierActuel = 0;
+	OnComboChange.Broadcast(0,Combo);
 
 	if (UMusicLayer* Music = GetWorld()->GetSubsystem<UMusicLayer>())
 	{
@@ -38,6 +39,7 @@ void AFinalProjectGameMode::ActualiserPalierAudio()
 	{
 		NouveauPalier = 1;
 	}
+	OnComboChange.Broadcast(NouveauPalier,Combo);
 
 	if (UMusicLayer* Music = GetWorld()->GetSubsystem<UMusicLayer>())
 	{

@@ -6,10 +6,6 @@
 
 class UImage;
 
-/**
- * Widget représentant une barre rythmique individuelle.
- * Le visuel (Image, brush, couleur) est configuré dans le Widget Blueprint (WBP_RhythmTick).
- */
 UCLASS(Abstract)
 class FINALPROJECT_API URhythmTickWidget : public UUserWidget
 {

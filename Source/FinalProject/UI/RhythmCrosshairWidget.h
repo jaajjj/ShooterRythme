@@ -7,10 +7,7 @@
 class UCanvasPanel;
 class URhythmTickWidget;
 
-/**
- * Widget de base pour le réticule rythmique (Cercle central + Point + Barres).
- * Gère le pool dynamique de barres et leur déplacement GPU pur selon la musique.
- */
+
 UCLASS(Abstract)
 class FINALPROJECT_API URhythmCrosshairWidget : public UUserWidget
 {
